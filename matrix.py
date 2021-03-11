@@ -1,5 +1,6 @@
 import traceback
 import sys
+import math
 
 
 class DimensionalError(Exception):
@@ -15,7 +16,7 @@ class matrix:
                 self.__l = [[0 for _ in range(rep)] for _ in range(rep)]
 
                 for i in range(len(self.__l)):
-                    self.__l[i][i] = (1, -1)[argument < 0]
+                    self.__l[i][i] = math.copysign(self.__l[i][i], argument)
         else:
             if rep is not None:
                 try:
