@@ -148,7 +148,7 @@ class matrix:
 
         i, j = key
 
-        if i.__class__.__name__ == j.__class__.__name__ != 'int':
+        if not i.__class__.__name__ == j.__class__.__name__ == 'int':
             try:
                 raise TypeError('matrix indices must be integers')
             except TypeError:
