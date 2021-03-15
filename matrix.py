@@ -1,14 +1,18 @@
 import traceback
 import sys
 import math
-
+import inspect
 
 class DimensionalError(Exception):
     pass
 
 
-class matrix:
+class matrix(object):
+    privates = ['privates']
+
     def __init__(self, argument, rep=None):
+        self.privates.extend(['_matrix__l', '__dict__'])
+
         if argument.__class__.__name__ == 'int' and rep is not None:
             if argument == 0:
                 self.__l = [[0 for _ in range(rep)] for _ in range(rep)]
@@ -19,48 +23,26 @@ class matrix:
                     self.__l[i][i] = math.copysign(self.__l[i][i], argument)
         else:
             if rep is not None:
-                try:
-                    raise TypeError("matrix construction using iterable expects at most 1 argument, got 2")
-                except TypeError:
-                    print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                          traceback.format_exc().splitlines()[-1], file=sys.stderr)
-                    sys.exit(1)
+                raise TypeError("matrix construction using iterable expects at most 1 argument, got 2")
 
             self.__l = [[_ for _ in i] for i in argument]
 
             if 'list' not in str(type(self.__l)) and 'tuple' not in str(type(self.__l)) and 'set' not in str(type(self.__l)):
-                try:
-                    raise TypeError("'list', 'tuple', 'set', or 'range' object expected")
-                except TypeError:
-                    print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                          traceback.format_exc().splitlines()[-1], file=sys.stderr)
+                raise TypeError("'list', 'tuple', 'set', or 'range' object expected")
 
             for i in self.__l:
                 if 'list' not in str(type(i)) and 'tuple' not in str(type(i)) and 'set' not in str(
                         type(i)) and 'range' not in str(type(i)):
-                    try:
-                        raise TypeError("'list', 'tuple', 'set', or 'range' object expected as rows")
-                    except TypeError:
-                        print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                              traceback.format_exc().splitlines()[-1], file=sys.stderr)
+                    raise TypeError("'list', 'tuple', 'set', or 'range' object expected as rows")
 
             for i in self.__l:
                 for j in i:
                     if 'int' not in str(type(j)) and 'float' not in str(type(j)):
-                        try:
-                            raise TypeError("'int' or 'float' objects expected as elements")
-                        except TypeError:
-                            print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(
-                                traceback.format_stack()[:-1]) +
-                                  traceback.format_exc().splitlines()[-1], file=sys.stderr)
+                        raise TypeError("'int' or 'float' objects expected as elements")
 
             for i in self.__l:
                 if len(i) != len(self.__l[0]):
-                    try:
-                        raise ValueError('number of columns must be uniform')
-                    except ValueError:
-                        print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                              traceback.format_exc().splitlines()[-1], file=sys.stderr)
+                    raise ValueError('number of columns must be uniform')
 
     def __dir__(self):
         return ['__module__', '__init__', '__str__', '__repr__', '__getitem__', 'rows', 'columns', '__setitem__',
@@ -69,6 +51,59 @@ class matrix:
                 '__getattribute__', '__setattr__', '__delattr__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__',
                 '__ge__', '__new__', '__reduce_ex__', '__reduce__', '__subclasshook__', '__init_subclass__',
                 '__format__', '__sizeof__', '__dir__', '__class__']
+
+    def __setattr__(self, *a):
+        if inspect.stack()[1][4]:
+            if 'self.' in inspect.stack()[1][4][0].strip():
+                object.__setattr__(self, *a)
+
+        if a[0] in self.privates:
+            try:
+                raise AttributeError("'matrix' object has no attribute '" + a[0] + "'")
+            except:
+                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) + traceback.format_exc().splitlines()[-1], file=sys.stderr)
+                sys.exit(1)
+        else:
+            try:
+                object.__setatrr__(self, *a)
+            except:
+                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) + traceback.format_exc().splitlines()[-1], file=sys.stderr)
+                sys.exit(1)
+
+    def __delattr__(self, a):
+        if inspect.stack()[1][4]:
+            if 'self.' in inspect.stack()[1][4][0].strip():
+                object.__delattr__(self, a)
+                return
+        if a in self.privates:
+            try:
+                raise AttributeError("'matrix' object has no attribute '" + a + "'")
+            except:
+                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) + traceback.format_exc().splitlines()[-1], file=sys.stderr)
+                sys.exit(1)
+        else:
+            try:
+                object.__delatrr__(self, a)
+            except AttributeError:
+                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) + traceback.format_exc().splitlines()[-1], file=sys.stderr)
+                sys.exit(1)
+
+    def __getattribute__(self, a):
+        if inspect.stack()[1][4]:
+            if 'self.' in inspect.stack()[1][4][0].strip():
+                return object.__getattribute__(self, a)
+        elif a in self.privates:
+            try:
+                raise AttributeError("'matrix' object has no attribute '" + a + "'")
+            except AttributeError:
+                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) + traceback.format_exc().splitlines()[-1], file=sys.stderr)
+                sys.exit(1)   
+        else:
+            try:
+                return object.__getatrribute__(self, a)
+            except:
+                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) + traceback.format_exc().splitlines()[-1], file=sys.stderr)
+                sys.exit(1)
 
     def __str__(self):
         M = '['
@@ -101,20 +136,12 @@ class matrix:
             c = ~c
 
         if c:
-            try:
-                raise TypeError("'" + item.__class__.__name__ + "' object is not iterable")
-            except TypeError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise TypeError("'" + item.__class__.__name__ + "' object is not iterable")
 
         i, j = item
 
         if i >= len(self.__l) or j >= len(self.__l[0]):
-            try:
-                raise IndexError('matrix index out of range')
-            except IndexError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise IndexError('matrix index out of range')
 
         return self.__l[i][j]
 
@@ -133,41 +160,21 @@ class matrix:
             c = ~c
 
         if c:
-            try:
-                raise TypeError("'" + key.__class__.__name__ + "' object is not iterable")
-            except TypeError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise TypeError("'" + key.__class__.__name__ + "' object is not iterable")
 
         if len(key) != 2:
-            try:
-                raise ValueError('expected row, column')
-            except ValueError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise ValueError('expected row, column')
 
         i, j = key
 
         if not i.__class__.__name__ == j.__class__.__name__ == 'int':
-            try:
-                raise TypeError('matrix indices must be integers')
-            except TypeError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise TypeError('matrix indices must be integers')
 
         if i >= len(self.__l) or j >= len(self.__l[0]):
-            try:
-                raise IndexError('matrix index out of range')
-            except IndexError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise IndexError('matrix index out of range')
 
         if value.__class__.__name__ != 'int' and value.__class__.__name__ != 'float':
-            try:
-                raise TypeError("'int' or 'float' object expected as values")
-            except TypeError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise TypeError("'int' or 'float' object expected as values")
 
         self.__l[i][j] = value
 
@@ -204,11 +211,7 @@ class matrix:
         C = None
 
         if i >= len(self.__l) or j >= len(self.__l[0]):
-            try:
-                raise IndexError('matrix index out of range')
-            except TypeError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise IndexError('matrix index out of range')
 
         if len(self.__l) == len(self.__l[0]):
             C = self.minor(i, j)
@@ -233,18 +236,10 @@ class matrix:
         M = [[0 for _ in range(len(self.__l[0]))] for _ in range(len(self.__l))]
 
         if not isinstance(other, matrix):
-            try:
-                raise TypeError("unsupported operand type(s) for +: 'matrix' and '" + other.__class__.__name__ + "'")
-            except TypeError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise TypeError("unsupported operand type(s) for +: 'matrix' and '" + other.__class__.__name__ + "'")
 
         if len(other.rows()) != len(self.__l) or len(other.columns()) != len(self.__l[0]):
-            try:
-                raise DimensionalError('unsupported operation between different dimensions for +')
-            except DimensionalError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise DimensionalError('unsupported operation between different dimensions for +')
 
         for i in range(len(M)):
             for j in range(len(M)):
@@ -256,18 +251,10 @@ class matrix:
         M = [[0 for _ in range(len(self.__l[0]))] for _ in range(len(self.__l))]
 
         if not isinstance(other, matrix):
-            try:
-                raise TypeError("unsupported operand type(s) for -: 'matrix' and '" + other.__class__.__name__ + "'")
-            except TypeError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise TypeError("unsupported operand type(s) for -: 'matrix' and '" + other.__class__.__name__ + "'")
 
         if len(other.rows()) != len(self.__l) or len(other.columns()) != len(self.__l[0]):
-            try:
-                raise DimensionalError('unsupported operation between different dimensions for -')
-            except DimensionalError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise DimensionalError('unsupported operation between different dimensions for -')
 
         for i in range(len(M)):
             for j in range(len(M)):
@@ -325,12 +312,7 @@ class matrix:
         M = self
 
         if other.__class__.__name__ != 'int':
-            try:
-                raise TypeError(
-                    "unsupported operand type(s) for ** or pow(): 'matrix' and '" + other.__class__.__name__ + "'")
-            except TypeError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise TypeError("unsupported operand type(s) for ** or pow(): 'matrix' and '" + other.__class__.__name__ + "'")
 
         for i in range(other):
             M *= self
@@ -362,11 +344,7 @@ def ismatrix(List):
 def ismultipliable(*args):
     for i in args:
         if not isinstance(i, matrix):
-            try:
-                raise TypeError("expected 'matrix' object, got '" + i.__class__.__name__ + "' object instead")
-            except TypeError:
-                print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                      traceback.format_exc().splitlines()[-1], file=sys.stderr)
+            raise TypeError("expected 'matrix' object, got '" + i.__class__.__name__ + "' object instead")
 
     M = len(args[0].rows())
 
@@ -380,11 +358,7 @@ def determinant(Matrix):
     D = None
 
     if Matrix.__class__.__name__ != 'matrix':
-        try:
-            raise TypeError('object of type ' + Matrix.__class__.__name__ + ' has no determinant()')
-        except TypeError:
-            print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                  traceback.format_exc().splitlines()[-1], file=sys.stderr)
+        raise TypeError('object of type ' + Matrix.__class__.__name__ + ' has no determinant()')
 
     if len(Matrix.rows()) == len(Matrix.columns()):
         D = 0
@@ -398,11 +372,7 @@ def adjoint(Matrix):
     M = matrix([[0 for _ in range(len(Matrix.columns()))] for _ in range(len(Matrix.rows()))])
 
     if Matrix.__class__.__name__ != 'matrix':
-        try:
-            raise TypeError('object of type ' + Matrix.__class__.__name__ + ' has no adjoint()')
-        except TypeError:
-            print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                  traceback.format_exc().splitlines()[-1], file=sys.stderr)
+        raise TypeError('object of type ' + Matrix.__class__.__name__ + ' has no adjoint()')
 
     for i in range(len(M.rows())):
         for j in range(len(M.columns())):
@@ -434,18 +404,10 @@ def multiply(*args):
 
 def multiply_scalar(Scalar, Matrix):
     if 'int' not in str(type(Scalar)) and 'float' not in str(type(Scalar)):
-        try:
-            raise TypeError("expected an 'int' or 'float' object for the first parameter")
-        except TypeError:
-            print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                  traceback.format_exc().splitlines()[-1], file=sys.stderr)
+        raise TypeError("expected an 'int' or 'float' object for the first parameter")
 
     if 'matrix' not in str(type(Matrix)):
-        try:
-            raise TypeError("expected a 'matrix' object for the second parameter")
-        except TypeError:
-            print(traceback.format_exc().splitlines(keepends=True)[0] + ''.join(traceback.format_stack()[:-1]) +
-                  traceback.format_exc().splitlines()[-1], file=sys.stderr)
+        raise TypeError("expected a 'matrix' object for the second parameter")
 
     M = eval(str(Matrix))
     for i in range(len(M)):
